@@ -41,12 +41,12 @@ class Body():
         self.y    = pos_y
         
         self.v_x  = v_x
-        self.v_x  = v_x
+        self.v_y  = v_y
     
     
     def __str__(self):
         """
-        Overwrite __str__ to print the bodies name
+        Overwrite __str__ to print the bodies name and the class name
         """
         return "Body class object named: " + self.name
     
@@ -57,32 +57,100 @@ class Body():
         (x,y).
         
         INPUT:
-            x (number/array): x-coordinate of object location
-            y (number/array): y-coordinate of object location
+            x (number/array): x-coordinate of object location [m]
+            y (number/array): y-coordinate of object location [m]
         
         OUTPUT (tuple(a_x, a_y)):
-            a_x (number/array): x component of acceleration
-            a_y (number/array): y component of acceleration
+            a_x (number/array): x component of acceleration [m/s^2]
+            a_y (number/array): y component of acceleration [m/s^2]
         """
         a_x = G * self.m / (x*x + y*y) * -x/(np.sqrt(x*x + y*y))
         a_y = G * self.m / (x*x + y*y) * -y/(np.sqrt(x*x + y*y))
         return a_x, a_y
+    
+    
+    def step(self, dt, body):
+        """
+        Calculates new position and velocity after time dt. Uses numerical
+        integration with a 4th-order Runge-Kutta integrator.
+        
+        INPUT:
+            dt (number): timestep of integration [s]
+        
+        OUTPUT:
+            x_n1 (number): x-coordinate of object location at time t + dt [m]
+            y_n1 (number): y-coordinate of object location at time t + dt [m]
+            vx_n1 (number): x component of velocity at time t + dt [m/s]
+            vy_n1 (number): y component of velocity at time t + dt [m/s]
+        """
+        k1x = self.v_x
+        k1y = self.v_y
+        
+        k1vx, k1vy = body.compute_acceleration(self.x, self.y)
+        
+        k2x = self.v_x + dt/2 * k1vx
+        k2y = self.v_y + dt/2 * k1vy
+        
+        k2vx, k2vy = body.compute_acceleration(self.x + dt/2 * k1x, 
+                                               self.y + dt/2 * k1y)
+        
+        k3x = self.v_x + dt/2 * k2vx
+        k3y = self.v_y + dt/2 * k2vy
+        
+        k3vx, k3vy = body.compute_acceleration(self.x + dt/2 * k2x, 
+                                               self.y + dt/2 * k2y)
+        
+        k4x = self.v_x + dt * k3vx
+        k4y = self.v_y + dt * k3vy
+        
+        k4vx, k4vy = body.compute_acceleration(self.x + dt * k3x, 
+                                               self.y + dt * k3y)
+        
+        x_n1 = self.x + dt/6 * (k1x + 2*k2x + 2*k3x + k4x)
+        y_n1 = self.y + dt/6 * (k1y + 2*k2y + 2*k3y + k4y)
+        vx_n1 = self.v_x + dt/6 * (k1vx + 2*k2vx + 2*k3vx + k4vx)
+        vy_n1 = self.v_y + dt/6 * (k1vy + 2*k2vy + 2*k3vy + k4vy)
+        
+        self.x  = x_n1
+        self.y  = y_n1
+        self.vx = vx_n1
+        self.vy = vy_n1
 
 
 
 ## defenition of bodies -------------------------------------------------------
-sun_mass = 1.989e30
+sun_mass   = 1.989e30
 sun_radius = 695700000.0
-sun = Body("Sun", 0, 0, 0, 0, sun_mass, sun_radius)
 
+earth_x0     = -147095000000.0
+earth_y0     = 0.0
+earth_vx0    = 0.0
+earth_vy0    = -30300.0
+earth_mass   = 5.972e24
+earth_radius = 6371000.0
+
+sun   = Body("Sun", 0, 0, 0, 0, sun_mass, sun_radius)
+earth = Body("Earth", earth_x0, earth_y0, earth_vx0, earth_vy0, earth_mass,
+             earth_radius)
+
+
+
+## test cases -----------------------------------------------------------------
+# case 1
 ax, ay = sun.compute_acceleration(1000000000.0, 500000000.0)
 
 print("ax:",ax)
 print("ay:",ay)
 
+# case 2
+dt = 86400.0 # Earth day in seconds
 
+earth.step(dt, sun)
 
-
+print("x:",earth.x)
+print("y:",earth.y)
+print("vx:",earth.vx)
+print("vy:",earth.vy)
 
 
 
