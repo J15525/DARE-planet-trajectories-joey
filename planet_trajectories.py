@@ -129,11 +129,21 @@ earth_vy0    = -30300.0
 earth_mass   = 5.972e24
 earth_radius = 6371000.0
 
-sun   = Body("Sun", 0, 0, 0, 0, sun_mass, sun_radius)
-earth = Body("Earth", earth_x0, earth_y0, earth_vx0, earth_vy0, earth_mass,
+# use floats for the x positions to avoid integer overflow in C, causing an 
+# error in numpy which result in a weird attribute error ('int' object has no 
+# attribute 'sqrt')
+sun     = Body("Sun", 0, 0, 0, 0, sun_mass, sun_radius)
+mercury = Body("Mercury", -46000000000., 0, 0, -58980, 0.33011e24, 2439700)
+venus   = Body("Venus", -107480000000., 0, 0, -35260, 4.8675e24, 6051800)
+earth   = Body("Earth", earth_x0, earth_y0, earth_vx0, earth_vy0, earth_mass,
              earth_radius)
+mars    = Body("Mars", -206620000000., 0, 0, -26500, 6.4171e23, 3389500)
+jupiter = Body("Jupiter", -740520000000., 0, 0, -13720, 1898.19e24, 71492000)
+saturn  = Body("Saturn", -1352550000000., 0, 0, -10180, 568.34e24, 54364000)
+uranus  = Body("Uranus", -2741300000000., 0, 0, -7110, 86.813e24, 24973000)
+neptune = Body("Neptune", -4444450000000., 0, 0, -5500, 102.413e24, 24341000)
 
-bodies = [sun, earth]
+bodies = [sun, mercury, venus, earth, mars, jupiter, saturn, uranus, neptune]
 
 
 
@@ -173,11 +183,20 @@ for planet in bodies:
 sim_input_str = "NAMES\n{}\n\nMASSES\n{}\n\nRADII\n{}\n\nTRAJECTORIES\n".format("\n".join(names), "\n".join(masses), "\n".join(radii))
 front_matter = sim_setup_str + sim_input_str
 
-trajectories_str = "0, {}, {}, {}, {}\n".format(sun.x, sun.y, earth.x, earth.y)
+xys = []
+for body in bodies:
+    xys.append(str(body.x))
+    xys.append(str(body.y))
+trajectories_str = "0, " + ", ".join(xys)
 # run trajectories
 for i in range(N_steps):
-    earth.step(dt, sun)
-    trajectories_str += "{}, {}, {}, {}, {}\n".format(i+1, sun.x, sun.y, earth.x, earth.y)
+    xys = []
+    for body in bodies[1:]:
+        body.step(dt, sun)
+    for body in bodies:
+        xys.append(str(body.x))
+        xys.append(str(body.y))
+    trajectories_str += str(i+1) + ", " + ", ".join(xys)
 
 with open("trajectories.txt", "w+") as f:
     f.write(front_matter)
