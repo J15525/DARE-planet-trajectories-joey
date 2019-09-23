@@ -113,8 +113,8 @@ class Body():
         
         self.x  = x_n1
         self.y  = y_n1
-        self.vx = vx_n1
-        self.vy = vy_n1
+        self.v_x = vx_n1
+        self.v_y = vy_n1
 
 
 
@@ -133,26 +133,58 @@ sun   = Body("Sun", 0, 0, 0, 0, sun_mass, sun_radius)
 earth = Body("Earth", earth_x0, earth_y0, earth_vx0, earth_vy0, earth_mass,
              earth_radius)
 
+bodies = [sun, earth]
+
+
+
+## simulation parameters ------------------------------------------------------
+dt = 86400.0 # Earth day in seconds
+
+N_steps = 365
+
 
 
 ## test cases -----------------------------------------------------------------
-# case 1
-ax, ay = sun.compute_acceleration(1000000000.0, 500000000.0)
+# =============================================================================
+# # case 1
+# ax, ay = sun.compute_acceleration(1000000000.0, 500000000.0)
+# 
+# print("ax:",ax)
+# print("ay:",ay)
+# 
+# 
+# # case 2
+# earth.step(dt, sun)
+# 
+# print("x:",earth.x)
+# print("y:",earth.y)
+# print("vx:",earth.vx)
+# print("vy:",earth.vy)
+# =============================================================================
 
-print("ax:",ax)
-print("ay:",ay)
 
-# case 2
-dt = 86400.0 # Earth day in seconds
+# case 3
+sim_setup_str = "NUM_BODIES \n{}\n\nNUM_STEPS\n{}\n\n".format(len(bodies), N_steps)
+names, masses, radii = [], [], []
+for planet in bodies:
+    names.append(planet.name)
+    masses.append(str(planet.m))
+    radii.append(str(planet.r))
+sim_input_str = "NAMES\n{}\n\nMASSES\n{}\n\nRADII\n{}\n\nTRAJECTORIES\n".format("\n".join(names), "\n".join(masses), "\n".join(radii))
+front_matter = sim_setup_str + sim_input_str
 
-earth.step(dt, sun)
+trajectories_str = "0, {}, {}, {}, {}\n".format(sun.x, sun.y, earth.x, earth.y)
+# run trajectories
+for i in range(N_steps):
+    earth.step(dt, sun)
+    trajectories_str += "{}, {}, {}, {}, {}\n".format(i+1, sun.x, sun.y, earth.x, earth.y)
 
-print("x:",earth.x)
-print("y:",earth.y)
-print("vx:",earth.vx)
-print("vy:",earth.vy)
+with open("trajectories.txt", "w+") as f:
+    f.write(front_matter)
+    f.write(trajectories_str)
+f.close()
 
-
+    
 
 
 
