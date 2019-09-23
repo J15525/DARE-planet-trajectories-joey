@@ -173,7 +173,7 @@ N_steps = 365
 # =============================================================================
 
 
-# case 3
+# full run with multiple planets
 sim_setup_str = "NUM_BODIES \n{}\n\nNUM_STEPS\n{}\n\n".format(len(bodies), N_steps)
 names, masses, radii = [], [], []
 for planet in bodies:
