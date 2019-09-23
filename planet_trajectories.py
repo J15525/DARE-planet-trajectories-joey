@@ -154,25 +154,7 @@ N_steps = 365
 
 
 
-## test cases -----------------------------------------------------------------
-# =============================================================================
-# # case 1
-# ax, ay = sun.compute_acceleration(1000000000.0, 500000000.0)
-# 
-# print("ax:",ax)
-# print("ay:",ay)
-# 
-# 
-# # case 2
-# earth.step(dt, sun)
-# 
-# print("x:",earth.x)
-# print("y:",earth.y)
-# print("vx:",earth.vx)
-# print("vy:",earth.vy)
-# =============================================================================
-
-
+## Main run -------------------------------------------------------------------
 # full run with multiple planets
 sim_setup_str = "NUM_BODIES \n{}\n\nNUM_STEPS\n{}\n\n".format(len(bodies), N_steps)
 names, masses, radii = [], [], []
