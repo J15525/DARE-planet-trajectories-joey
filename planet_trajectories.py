@@ -61,22 +61,23 @@ class Body():
             x (number/array): x-coordinate of object location [m]
             y (number/array): y-coordinate of object location [m]
         
-        OUTPUT (tuple(a_x, a_y)):
+        OUTPUT (numpy_array([a_x, a_y])):
             a_x (number/array): x component of acceleration [m/s^2]
             a_y (number/array): y component of acceleration [m/s^2]
         """
         a_x = G * self.m / (x*x + y*y) * -x/(np.sqrt(x*x + y*y))
         a_y = G * self.m / (x*x + y*y) * -y/(np.sqrt(x*x + y*y))
-        return a_x, a_y
+        return np.array([a_x, a_y])
     
     
-    def step(self, dt, body):
+    def step(self, dt, bodies):
         """
         Calculates new position and velocity after time dt. Uses numerical
         integration with a 4th-order Runge-Kutta integrator.
         
         INPUT:
             dt (number): timestep of integration [s]
+            bodies (list of Body object): bodies influencing the current body
         
         OUTPUT:
             x_n1 (number): x-coordinate of object location at time t + dt [m]
@@ -87,25 +88,25 @@ class Body():
         k1x = self.v_x
         k1y = self.v_y
         
-        k1vx, k1vy = body.compute_acceleration(self.x, self.y)
+        k1vx, k1vy = sum([body.compute_acceleration(self.x, self.y) for body in bodies])
         
         k2x = self.v_x + dt/2 * k1vx
         k2y = self.v_y + dt/2 * k1vy
         
-        k2vx, k2vy = body.compute_acceleration(self.x + dt/2 * k1x, 
-                                               self.y + dt/2 * k1y)
+        k2vx, k2vy = sum([body.compute_acceleration(self.x + dt/2 * k1x, 
+                                               self.y + dt/2 * k1y) for body in bodies])
         
         k3x = self.v_x + dt/2 * k2vx
         k3y = self.v_y + dt/2 * k2vy
         
-        k3vx, k3vy = body.compute_acceleration(self.x + dt/2 * k2x, 
-                                               self.y + dt/2 * k2y)
+        k3vx, k3vy = sum([body.compute_acceleration(self.x + dt/2 * k2x, 
+                                               self.y + dt/2 * k2y) for body in bodies])
         
         k4x = self.v_x + dt * k3vx
         k4y = self.v_y + dt * k3vy
         
-        k4vx, k4vy = body.compute_acceleration(self.x + dt * k3x, 
-                                               self.y + dt * k3y)
+        k4vx, k4vy = sum([body.compute_acceleration(self.x + dt * k3x, 
+                                               self.y + dt * k3y) for body in bodies])
         
         x_n1 = self.x + dt/6 * (k1x + 2*k2x + 2*k3x + k4x)
         y_n1 = self.y + dt/6 * (k1y + 2*k2y + 2*k3y + k4y)
@@ -155,7 +156,7 @@ N_steps = 365
 
 filename = "trajectories.txt"
 
-plot = False # create a plot or not? simulation will take some extra time
+plot = True # create a plot or not? simulation will take some extra time
 
 
 
@@ -187,12 +188,15 @@ if plot:
     
     colours = ["yellow", "black", "green", "blue", "red", "grey", "orange", 
                "pink", "lightblue"]
+    
+    xy_plot = np.zeros((N_steps, len(bodies), 2))
 
 # run trajectories
 for i in range(N_steps):
     
-    for body in bodies[1:]:
-        body.step(dt, sun)
+    for k in range(1, len(bodies)):
+        # calculate new x and y coordinates for each body
+        bodies[k].step(dt, bodies[:k]+bodies[k+1:])
     
     xys = []
     for j in range(len(bodies)):
@@ -200,13 +204,9 @@ for i in range(N_steps):
         xys.append(str(bodies[j].x))
         xys.append(str(bodies[j].y))
         
-        # create plot if desired
+        # add data to plot arrays if desired
         if plot:
-            if i == 0:
-                ax.plot(bodies[j].x, bodies[j].y, linestyle="none", marker="x", 
-                        color=colours[j], label=bodies[j].name)
-            ax.plot(bodies[j].x, bodies[j].y, linestyle="none", marker="x", 
-                    color=colours[j])
+            xy_plot[i, j, :] = bodies[j].x, bodies[j].y
     
     trajectories_str += str(i+1) + ", " + ", ".join(xys) + "\n"
 
@@ -217,6 +217,9 @@ with open(filename, "w+") as f:
 f.close()
 
 if plot:
+    for j in range(len(bodies)):
+        ax.plot(xy_plot[:,j,0], xy_plot[:,j,1], linestyle="none", marker="x", 
+                color=colours[j], label=bodies[j].name)
     ax.legend(loc="upper left")
     fig.show()
 
