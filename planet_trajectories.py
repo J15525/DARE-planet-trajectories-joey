@@ -88,25 +88,29 @@ class Body():
         k1x = self.v_x
         k1y = self.v_y
         
-        k1vx, k1vy = sum([body.compute_acceleration(self.x, self.y) for body in bodies])
+        k1vx, k1vy = sum([body.compute_acceleration(self.x, self.y) for body \
+                          in bodies])
         
         k2x = self.v_x + dt/2 * k1vx
         k2y = self.v_y + dt/2 * k1vy
         
         k2vx, k2vy = sum([body.compute_acceleration(self.x + dt/2 * k1x, 
-                                               self.y + dt/2 * k1y) for body in bodies])
+                                                    self.y + dt/2 * k1y) for \
+                          body in bodies])
         
         k3x = self.v_x + dt/2 * k2vx
         k3y = self.v_y + dt/2 * k2vy
         
         k3vx, k3vy = sum([body.compute_acceleration(self.x + dt/2 * k2x, 
-                                               self.y + dt/2 * k2y) for body in bodies])
+                                                    self.y + dt/2 * k2y) for \
+                          body in bodies])
         
         k4x = self.v_x + dt * k3vx
         k4y = self.v_y + dt * k3vy
         
         k4vx, k4vy = sum([body.compute_acceleration(self.x + dt * k3x, 
-                                               self.y + dt * k3y) for body in bodies])
+                                                    self.y + dt * k3y) for \
+                          body in bodies])
         
         x_n1 = self.x + dt/6 * (k1x + 2*k2x + 2*k3x + k4x)
         y_n1 = self.y + dt/6 * (k1y + 2*k2y + 2*k3y + k4y)
@@ -162,14 +166,17 @@ plot = True # create a plot or not? simulation will take some extra time
 
 ## Main run -------------------------------------------------------------------
 # setup file front matter
-sim_setup_str = "NUM_BODIES \n{}\n\nNUM_STEPS\n{}\n\n".format(len(bodies), N_steps)
+sim_setup_str = "NUM_BODIES \n{}\n\nNUM_STEPS\n{}\n\n".format(len(bodies), 
+                                                              N_steps)
 
 names, masses, radii = [], [], []
 for planet in bodies:
     names.append(planet.name)
     masses.append(str(planet.m))
     radii.append(str(planet.r))
-sim_input_str = "NAMES\n{}\n\nMASSES\n{}\n\nRADII\n{}\n\nTRAJECTORIES\n".format("\n".join(names), "\n".join(masses), "\n".join(radii))
+sim_input_str = "NAMES\n{}\n\nMASSES\n{}\n \
+\nRADII\n{}\n\nTRAJECTORIES\n".format("\n".join(names), "\n".join(masses), 
+                                      "\n".join(radii))
 
 front_matter = sim_setup_str + sim_input_str
 
