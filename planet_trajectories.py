@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Calculate planet trajectories for one planet and sun.
+Calculate planet trajectories.
 """
 
 ## imports --------------------------------------------------------------------
