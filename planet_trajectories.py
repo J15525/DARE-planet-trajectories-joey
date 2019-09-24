@@ -5,6 +5,7 @@ Calculate planet trajectories for one planet and sun.
 
 ## imports --------------------------------------------------------------------
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 
@@ -60,22 +61,23 @@ class Body():
             x (number/array): x-coordinate of object location [m]
             y (number/array): y-coordinate of object location [m]
         
-        OUTPUT (tuple(a_x, a_y)):
+        OUTPUT (numpy_array([a_x, a_y])):
             a_x (number/array): x component of acceleration [m/s^2]
             a_y (number/array): y component of acceleration [m/s^2]
         """
         a_x = G * self.m / (x*x + y*y) * -x/(np.sqrt(x*x + y*y))
         a_y = G * self.m / (x*x + y*y) * -y/(np.sqrt(x*x + y*y))
-        return a_x, a_y
+        return np.array([a_x, a_y])
     
     
-    def step(self, dt, body):
+    def step(self, dt, bodies):
         """
         Calculates new position and velocity after time dt. Uses numerical
         integration with a 4th-order Runge-Kutta integrator.
         
         INPUT:
             dt (number): timestep of integration [s]
+            bodies (list of Body object): bodies influencing the current body
         
         OUTPUT:
             x_n1 (number): x-coordinate of object location at time t + dt [m]
@@ -86,25 +88,25 @@ class Body():
         k1x = self.v_x
         k1y = self.v_y
         
-        k1vx, k1vy = body.compute_acceleration(self.x, self.y)
+        k1vx, k1vy = sum([body.compute_acceleration(self.x, self.y) for body in bodies])
         
         k2x = self.v_x + dt/2 * k1vx
         k2y = self.v_y + dt/2 * k1vy
         
-        k2vx, k2vy = body.compute_acceleration(self.x + dt/2 * k1x, 
-                                               self.y + dt/2 * k1y)
+        k2vx, k2vy = sum([body.compute_acceleration(self.x + dt/2 * k1x, 
+                                               self.y + dt/2 * k1y) for body in bodies])
         
         k3x = self.v_x + dt/2 * k2vx
         k3y = self.v_y + dt/2 * k2vy
         
-        k3vx, k3vy = body.compute_acceleration(self.x + dt/2 * k2x, 
-                                               self.y + dt/2 * k2y)
+        k3vx, k3vy = sum([body.compute_acceleration(self.x + dt/2 * k2x, 
+                                               self.y + dt/2 * k2y) for body in bodies])
         
         k4x = self.v_x + dt * k3vx
         k4y = self.v_y + dt * k3vy
         
-        k4vx, k4vy = body.compute_acceleration(self.x + dt * k3x, 
-                                               self.y + dt * k3y)
+        k4vx, k4vy = sum([body.compute_acceleration(self.x + dt * k3x, 
+                                               self.y + dt * k3y) for body in bodies])
         
         x_n1 = self.x + dt/6 * (k1x + 2*k2x + 2*k3x + k4x)
         y_n1 = self.y + dt/6 * (k1y + 2*k2y + 2*k3y + k4y)
@@ -136,7 +138,7 @@ sun     = Body("Sun", 0, 0, 0, 0, sun_mass, sun_radius)
 mercury = Body("Mercury", -46000000000., 0, 0, -58980, 0.33011e24, 2439700)
 venus   = Body("Venus", -107480000000., 0, 0, -35260, 4.8675e24, 6051800)
 earth   = Body("Earth", earth_x0, earth_y0, earth_vx0, earth_vy0, earth_mass,
-             earth_radius)
+               earth_radius)
 mars    = Body("Mars", -206620000000., 0, 0, -26500, 6.4171e23, 3389500)
 jupiter = Body("Jupiter", -740520000000., 0, 0, -13720, 1898.19e24, 71492000)
 saturn  = Body("Saturn", -1352550000000., 0, 0, -10180, 568.34e24, 54364000)
@@ -147,64 +149,79 @@ bodies = [sun, mercury, venus, earth, mars, jupiter, saturn, uranus, neptune]
 
 
 
-## simulation parameters ------------------------------------------------------
+## simulation and output parameters -------------------------------------------
 dt = 86400.0 # Earth day in seconds
 
 N_steps = 365
 
+filename = "trajectories.txt"
+
+plot = True # create a plot or not? simulation will take some extra time
 
 
-## test cases -----------------------------------------------------------------
-# =============================================================================
-# # case 1
-# ax, ay = sun.compute_acceleration(1000000000.0, 500000000.0)
-# 
-# print("ax:",ax)
-# print("ay:",ay)
-# 
-# 
-# # case 2
-# earth.step(dt, sun)
-# 
-# print("x:",earth.x)
-# print("y:",earth.y)
-# print("vx:",earth.vx)
-# print("vy:",earth.vy)
-# =============================================================================
 
-
-# case 3
+## Main run -------------------------------------------------------------------
+# setup file front matter
 sim_setup_str = "NUM_BODIES \n{}\n\nNUM_STEPS\n{}\n\n".format(len(bodies), N_steps)
+
 names, masses, radii = [], [], []
 for planet in bodies:
     names.append(planet.name)
     masses.append(str(planet.m))
     radii.append(str(planet.r))
 sim_input_str = "NAMES\n{}\n\nMASSES\n{}\n\nRADII\n{}\n\nTRAJECTORIES\n".format("\n".join(names), "\n".join(masses), "\n".join(radii))
+
 front_matter = sim_setup_str + sim_input_str
 
+# initial state
 xys = []
 for body in bodies:
     xys.append(str(body.x))
     xys.append(str(body.y))
-trajectories_str = "0, " + ", ".join(xys)
+trajectories_str = "0, " + ", ".join(xys) + "\n"
+
+# prepare a plot
+if plot:
+    fig, ax = plt.subplots(1,1)
+    fig.suptitle("Trajectories")
+    ax.set(xlabel="x-coordinate [m]", ylabel="y-coordinate [m]")
+    
+    colours = ["yellow", "black", "green", "blue", "red", "grey", "orange", 
+               "pink", "lightblue"]
+    
+    xy_plot = np.zeros((N_steps, len(bodies), 2))
+
 # run trajectories
 for i in range(N_steps):
+    
+    for k in range(1, len(bodies)):
+        # calculate new x and y coordinates for each body
+        bodies[k].step(dt, bodies[:k]+bodies[k+1:])
+    
     xys = []
-    for body in bodies[1:]:
-        body.step(dt, sun)
-    for body in bodies:
-        xys.append(str(body.x))
-        xys.append(str(body.y))
-    trajectories_str += str(i+1) + ", " + ", ".join(xys)
+    for j in range(len(bodies)):
+        # data for output file
+        xys.append(str(bodies[j].x))
+        xys.append(str(bodies[j].y))
+        
+        # add data to plot arrays if desired
+        if plot:
+            xy_plot[i, j, :] = bodies[j].x, bodies[j].y
+    
+    trajectories_str += str(i+1) + ", " + ", ".join(xys) + "\n"
 
-with open("trajectories.txt", "w+") as f:
+# write output
+with open(filename, "w+") as f:
     f.write(front_matter)
     f.write(trajectories_str)
 f.close()
 
-    
-
+if plot:
+    for j in range(len(bodies)):
+        ax.plot(xy_plot[:,j,0], xy_plot[:,j,1], linestyle="none", marker="x", 
+                color=colours[j], label=bodies[j].name)
+    ax.legend(loc="upper left")
+    fig.show()
 
 
 
