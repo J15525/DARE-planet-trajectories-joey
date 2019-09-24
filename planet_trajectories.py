@@ -5,6 +5,7 @@ Calculate planet trajectories for one planet and sun.
 
 ## imports --------------------------------------------------------------------
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 
@@ -136,7 +137,7 @@ sun     = Body("Sun", 0, 0, 0, 0, sun_mass, sun_radius)
 mercury = Body("Mercury", -46000000000., 0, 0, -58980, 0.33011e24, 2439700)
 venus   = Body("Venus", -107480000000., 0, 0, -35260, 4.8675e24, 6051800)
 earth   = Body("Earth", earth_x0, earth_y0, earth_vx0, earth_vy0, earth_mass,
-             earth_radius)
+               earth_radius)
 mars    = Body("Mars", -206620000000., 0, 0, -26500, 6.4171e23, 3389500)
 jupiter = Body("Jupiter", -740520000000., 0, 0, -13720, 1898.19e24, 71492000)
 saturn  = Body("Saturn", -1352550000000., 0, 0, -10180, 568.34e24, 54364000)
@@ -147,46 +148,77 @@ bodies = [sun, mercury, venus, earth, mars, jupiter, saturn, uranus, neptune]
 
 
 
-## simulation parameters ------------------------------------------------------
+## simulation and output parameters -------------------------------------------
 dt = 86400.0 # Earth day in seconds
 
 N_steps = 365
 
+filename = "trajectories.txt"
+
+plot = False # create a plot or not? simulation will take some extra time
+
 
 
 ## Main run -------------------------------------------------------------------
-# full run with multiple planets
+# setup file front matter
 sim_setup_str = "NUM_BODIES \n{}\n\nNUM_STEPS\n{}\n\n".format(len(bodies), N_steps)
+
 names, masses, radii = [], [], []
 for planet in bodies:
     names.append(planet.name)
     masses.append(str(planet.m))
     radii.append(str(planet.r))
 sim_input_str = "NAMES\n{}\n\nMASSES\n{}\n\nRADII\n{}\n\nTRAJECTORIES\n".format("\n".join(names), "\n".join(masses), "\n".join(radii))
+
 front_matter = sim_setup_str + sim_input_str
 
+# initial state
 xys = []
 for body in bodies:
     xys.append(str(body.x))
     xys.append(str(body.y))
-trajectories_str = "0, " + ", ".join(xys)
+trajectories_str = "0, " + ", ".join(xys) + "\n"
+
+# prepare a plot
+if plot:
+    fig, ax = plt.subplots(1,1)
+    fig.suptitle("Trajectories")
+    ax.set(xlabel="x-coordinate [m]", ylabel="y-coordinate [m]")
+    
+    colours = ["yellow", "black", "green", "blue", "red", "grey", "orange", 
+               "pink", "lightblue"]
+
 # run trajectories
 for i in range(N_steps):
-    xys = []
+    
     for body in bodies[1:]:
         body.step(dt, sun)
-    for body in bodies:
-        xys.append(str(body.x))
-        xys.append(str(body.y))
-    trajectories_str += str(i+1) + ", " + ", ".join(xys)
+    
+    xys = []
+    for j in range(len(bodies)):
+        # data for output file
+        xys.append(str(bodies[j].x))
+        xys.append(str(bodies[j].y))
+        
+        # create plot if desired
+        if plot:
+            if i == 0:
+                ax.plot(bodies[j].x, bodies[j].y, linestyle="none", marker="x", 
+                        color=colours[j], label=bodies[j].name)
+            ax.plot(bodies[j].x, bodies[j].y, linestyle="none", marker="x", 
+                    color=colours[j])
+    
+    trajectories_str += str(i+1) + ", " + ", ".join(xys) + "\n"
 
-with open("trajectories.txt", "w+") as f:
+# write output
+with open(filename, "w+") as f:
     f.write(front_matter)
     f.write(trajectories_str)
 f.close()
 
-    
-
+if plot:
+    ax.legend(loc="upper left")
+    fig.show()
 
 
 
